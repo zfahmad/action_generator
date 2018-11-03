@@ -14,17 +14,17 @@ class Model:
                               units=32,
                               activation=tf.nn.relu)
 
-        h_2 = tf.layers.dropout(inputs=h_1,
-                                rate=0.2)
-
-        h_3 = tf.layers.dense(inputs=h_2,
-                              units=16,
-                              activation=tf.nn.relu)
+        # h_2 = tf.layers.dropout(inputs=h_1,
+        #                         rate=0.2)
+        #
+        # h_3 = tf.layers.dense(inputs=h_2,
+        #                       units=16,
+        #                       activation=tf.nn.relu)
 
         out = [None for i in range(num_actions)]
 
         for i in range(num_actions):
-          out[i] = tf.layers.dense(inputs=h_3,
+          out[i] = tf.layers.dense(inputs=h_1,
                                    units=1,
                                    activation=tf.nn.sigmoid)
 

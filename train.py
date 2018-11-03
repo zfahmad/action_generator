@@ -2,10 +2,12 @@ import tensorflow as tf
 from model import Model
 import numpy as np
 import reward
+import one_ply as op
 
 
 def create_input_batch(mu_, batch_size):
-    mu = np.random.normal(mu_, 0.01, [batch_size, 3])
+    mu = np.random.normal(mu_, 0.1, [batch_size, 3])
+    # mu = np.random.uniform(0, 1, [batch_size, 3])
     return mu
 
 
@@ -44,24 +46,42 @@ def calc_loss(r, a):
     return loss
 
 
-BATCH_SIZE = 10
+BATCH_SIZE = 32
 NUM_ACTIONS = 3
+NUM_TRIALS = 5
+TRAINING_STEPS = 10000
+INTERVAL = 250
+OUTPUT_FILE = 'reg_kr_p_0_1.dat'
+
 
 m = Model(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
 r = objective(m.actions, m.x)
-
 loss = calc_loss(r, m.actions)
-
 optimizer = tf.train.AdamOptimizer(1e-3)
 train_step = optimizer.minimize(-loss)
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
 
-    mu_ = [0.25, 0.5, 0.75]
-    for i in range(5000):
-        peaks = create_input_batch(mu_, BATCH_SIZE)
-        ts, t_loss, actions, rw = sess.run([train_step, loss, m.actions, r], feed_dict={m.x: peaks})
-        if not i % 100:
-            print(t_loss)
-            print(actions)
+total_regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
+out_file = open(OUTPUT_FILE, 'wb')
+
+for trial in range(NUM_TRIALS):
+    regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+
+        mu_ = [0.25, 0.5, 0.75]
+        for i in range(TRAINING_STEPS):
+            peaks = create_input_batch(mu_, BATCH_SIZE)
+            ts, train_loss = sess.run([train_step, loss], feed_dict={m.x: peaks})
+            if not i % INTERVAL:
+                peaks = create_input_batch(mu_, BATCH_SIZE)
+                actions = sess.run(m.actions, feed_dict={m.x: peaks})
+                stats = op.test_net(peaks, actions)
+                print_list = [trial, i, train_loss, stats[0]]
+                print("Trial: {:2} Step: {:5} Reward: {:10.5} Regret: {:8.5}".format(*print_list))
+                regret[i // INTERVAL] = stats
+
+        total_regret += regret
+
+total_regret /= NUM_TRIALS
+np.save(out_file, total_regret)

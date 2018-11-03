@@ -14,7 +14,7 @@ def evaluate(batch_actions, batch_peaks):
 
 
 def sample(peaks, actions, num_samples):
-    eta = 0.01
+    eta = 0.05
     f = np.random.uniform(.5, 2, [3])
 
     a_realized = []
