@@ -6,8 +6,8 @@ import one_ply as op
 
 
 def create_input_batch(mu_, batch_size):
-    mu = np.random.normal(mu_, 0.1, [batch_size, 3])
-    # mu = np.random.uniform(0, 1, [batch_size, 3])
+    # mu = np.random.normal(mu_, 0.1, [batch_size, 3])
+    mu = np.random.uniform(0, 1, [batch_size, 3])
     return mu
 
 
@@ -51,7 +51,7 @@ NUM_ACTIONS = 3
 NUM_TRIALS = 5
 TRAINING_STEPS = 10000
 INTERVAL = 250
-OUTPUT_FILE = 'reg_kr_p_0_1.dat'
+OUTPUT_FILE = 'reg_kr_np.dat'
 
 
 m = Model(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
