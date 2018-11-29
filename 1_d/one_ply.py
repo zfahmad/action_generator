@@ -11,11 +11,15 @@ def test_net(batch_peaks, batch_actions):
         actions = np.reshape(actions, [-1])
         f_ = np.random.uniform(0.5, 2.0, np.size(actions))
 
+        # print(mu_)
+        #
         a = kr_search(mu_, f_, actions, 25)
         reg.append(cal_regret(f_, mu_, mu_[np.argmax(f_)], a))
 
         uni_a = np.array([0.25, 0.5, 0.75])
         a = kr_search(mu_, f_, uni_a, 25)
+        # print(f_)
+        # print(a)
         reg_uni.append(cal_regret(f_, mu_, mu_[np.argmax(f_)], a))
 
     return [np.mean(reg), np.mean(reg_uni)]
@@ -38,6 +42,8 @@ def one_ply(mu_, f_, actions, num_samples):
 
 
 def cal_regret(f_, mu_, a, a_):
+    # tru_r = 0
+    # obs_r = 0
     regret = 0
 
     for i in range(1000):
@@ -95,7 +101,13 @@ def kr_search(mu_, f_, actions, num_samples):
         a_vals[sel_ind] = ((a_vals[sel_ind] * a_counts[sel_ind]) + r) / (a_counts[sel_ind] + 1)
         a_counts[sel_ind] += 1
         a_stats = update_kr(A, a_vals, a_counts)
+        # print(a_stats)
 
+    # print(f_)
+    # print(mu_)
+    # print(actions)
+    # print(A[np.argmax(a_vals)])
+    # print(a_vals)
     return A[np.argmax(a_vals)]
 
 
@@ -118,3 +130,29 @@ def update_kr(actions, a_vals, a_counts, C=1):
         stats[i] = e_a[i] + C * np.sqrt(np.log(np.sum(norm)) / norm[i])
 
     return stats
+
+
+# dir = 'vregs'
+# rw = open(dir + '/reg_creg_{}_{}_0-1.dat'.format(sys.argv[1],
+#                                       sys.argv[2]), 'ab')
+#
+# for i in range(10000):
+#     for j in range(20):
+#         mu = []
+#         for m in mu_:
+#             mu.append(m + np.random.normal(0, 0.05))
+#
+# np.save(rw, uni_regs)
+
+# mu_1 = np.array([.25, .5, .75])
+# a_1 = np.array([.12, .41, .93])
+#
+# a_2 = np.array([.24, .513, .76])
+# mu_2 = np.array([.26, .49, .75])
+#
+# kr_search(mu_2, a_2, 128)
+#
+# test_cases = {0: [f_1, a_1], 1: [f_2, a_2]}
+# print(test_cases)
+#
+# print(test_net(test_cases))
