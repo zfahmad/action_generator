@@ -10,16 +10,17 @@ def reward_function(a, mu, f, epsilon=10):
                 for i in range(len(mu))])
     return r
 
-def evaluate_outputs(input, outputs, num_samples=6, eta=0.05):
+def evaluate_outputs(input_state, outputs, num_samples=32, eta=0.025):
     outcomes = []
     rewards = []
-    f = np.random.uniform(-4, 4, 15)
+    f = np.random.uniform(0, 4, 16)
+    # f = [2, 0.5, 1]
 
     for i in range(num_samples):
         ind = i % len(outputs)
         pert = np.random.normal(0, 2 * [eta])
         outcome = outputs[ind] + pert
-        reward = reward_function(outcome, input, f)
+        reward = reward_function(outcome, input_state, f)
         outcomes.append(outcome)
         rewards.append(reward)
 
@@ -36,6 +37,73 @@ def batch_evaluate(batch_inputs, batch_outputs):
 
     return np.array(batch_outcomes), np.array(batch_rewards)
 
+def calc_regret(input_state, outputs):
+    f = np.random.uniform(0, 4, 16)
+    eta = 0.025
+
+    bases = [.125, .375, .625, .875]
+
+    uni_actions = []
+
+    for i in bases:
+        for j in bases:
+            uni_actions.append([i, j])
+
+    pred_a = one_ply(input_state, outputs, f)
+    true_a = input_state[np.argmax(f)]
+    uni_a = uni_actions[np.argmax(f)]
+
+    pred_v = 0
+    true_v = 0
+    uni_v = 0
+
+    for i in range(1000):
+        pert = np.random.normal(0, 2 * [eta])
+        outcome = pred_a + pert
+        pred_v += reward_function(outcome, input_state, f)
+
+    for i in range(1000):
+        pert = np.random.normal(0, 2 * [eta])
+        outcome = true_a + pert
+        true_v += reward_function(outcome, input_state, f)
+
+    for i in range(1000):
+        pert = np.random.normal(0, 2 * [eta])
+        outcome = uni_a + pert
+        uni_v += reward_function(outcome, input_state, f)
+
+    pred_v /= 1000
+    true_v /= 1000
+    uni_v /= 1000
+
+    return true_v - pred_v, true_v - uni_v
+
+def batch_regret(batch_inputs, batch_outputs):
+    regret = np.zeros(2)
+
+    for ind in range(len(batch_inputs)):
+        regret += calc_regret(batch_inputs[ind], batch_outputs[ind])
+        
+    return regret / len(batch_inputs)
+
+def one_ply(input_state, actions, f, num_samples=10):
+    actions_stats = np.zeros(len(actions))
+    actions_counts = np.zeros(len(actions))
+    eta = 0.025
+
+    total_samples = len(actions) * num_samples
+
+    for i in range(total_samples):
+        ind = i % len(actions)
+        pert = np.random.normal(0, 2 * [eta])
+        outcome = actions[ind] + pert
+        reward = reward_function(outcome, input_state, f)
+        actions_stats[ind] += reward
+
+    actions_stats = actions_stats / num_samples
+
+    return actions[np.argmax(actions_stats)]
+
 def plot_reward_space(mu, f):
     x = np.linspace(0, 1, 101)
     y = np.linspace(0, 1, 101)
@@ -51,26 +119,32 @@ def plot_reward_space(mu, f):
 
         r_space.append(row)
 
-    r_space.reverse()
     r_space = np.array(r_space)
     plt.xlim([0, 100])
     plt.ylim([0, 100])
     plt.xticks(np.arange(0, len(x), 10), np.arange(0, 11) / 10)
-    plt.yticks(np.arange(0, len(x), 10), np.arange(10, -1, -1) / 10)
-    plt.imshow(r_space, cmap='OrRd', vmin=-4, vmax=4)
+    plt.yticks(np.arange(0, len(x), 10), np.arange(0, 11) / 10)
+    plt.imshow(r_space, cmap='gray', vmin=-4, vmax=4)
     plt.colorbar()
-    plt.contour(r_space, levels=12, alpha=0.6, linewidths=1, cmap='gray')
-    a = mu[::, 1]
-    b = mu[::, 0]
-    plt.scatter(a * 100, 100 - b * 100, color='blue', s=20, alpha=1, marker='x',
-                zorder=2)
+    plt.contour(r_space, alpha=0.6, linewidths=1, colors='black')
+    # a = mu[::, 1]
+    # b = mu[::, 0]
+    # plt.scatter(a * 100, b * 100, color='blue', s=20, alpha=1, marker='x',
+    #             zorder=2)
+    plt.grid(alpha=0.75, linestyle='dashed')
     plt.show()
 
 
-mu = np.random.uniform(0, 1, (15, 2))
-f = np.random.uniform(-4, 4, 15)
+# mu = np.random.uniform(0, 1, (20, 2))
+# mu = [[.25, .25], [0.5, 0.5], [.75, .75]]
+# f = [.5, 2, 1.]
+# a = [[.25, .25], [.5, .5], [.75, .75]]
 
-plot_reward_space(mu, f)
+# stats = one_ply(mu, a, f)
+# print(stats)
+
+# plot_reward_space(mu, f)
+
 
 # batch_inputs = [[[0.25, 0.30],
 #                  [0.45, 0.57],
@@ -78,14 +152,14 @@ plot_reward_space(mu, f)
 #                 [[0.78, 0.51],
 #                  [0.81, 0.93],
 #                  [0.67, 0.17]]]
-#
+
 # batch_outputs = [[[0.22, 0.30],
 #                   [0.41, 0.37],
 #                   [0.47, 0.25]],
 #                  [[0.68, 0.90],
 #                   [0.89, 0.13],
 #                   [0.37, 0.27]]]
-#
+
 # batch_outcomes, batch_rewards = batch_evaluate(batch_inputs, batch_outputs)
 # print(batch_outcomes)
 # print(batch_rewards)
