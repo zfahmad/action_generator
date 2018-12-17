@@ -44,16 +44,13 @@ def calc_loss(r, a):
 
     reg = tf.reduce_sum(K, axis=[1, 2])
 
-    loss = tf.reduce_mean(l) - 0.01 * tf.reduce_mean(reg)
+    loss = tf.reduce_mean(l) - 0.1 * tf.reduce_mean(reg)
     return loss
 
 
-BATCH_SIZE = 32
+BATCH_SIZE = 9
 NUM_ACTIONS = 16
-NUM_TRIALS = 3
-TRAINING_STEPS = 30000
-INTERVAL = 250
-OUTPUT_FILE = 'p16_n0-05_reg_16_less.dat'
+# OUTPUT_FILE = 'p16_n0-05_reg_16.dat'
 
 
 m = Model(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
@@ -62,36 +59,25 @@ loss = calc_loss(r, m.actions)
 optimizer = tf.train.AdamOptimizer(1e-4)
 train_step = optimizer.minimize(-loss)
 
+saver = tf.train.Saver()
 
-total_regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
-out_file = open(OUTPUT_FILE, 'wb')
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    saver.restore(sess, './model.ckpt')
 
-for trial in range(NUM_TRIALS):
-    regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
-    saver = tf.train.Saver()
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+    peaks = create_input_batch(BATCH_SIZE)
+    actions = sess.run(m.actions, feed_dict={m.x: peaks})
 
-
-        print("{:^5} {:^5} {:^10} {:^8}".format('Trial','Step', 'Reward', 'Regret'))
-        print("-" * 31)
-
-        for i in range(TRAINING_STEPS):
-
-            peaks = create_input_batch(BATCH_SIZE)
-            ts, train_loss = sess.run([train_step, loss], feed_dict={m.x: peaks})
-
-            if not i % INTERVAL:
-                peaks = create_input_batch(BATCH_SIZE)
-                actions, rewards = sess.run([m.actions, loss], feed_dict={m.x: peaks})
-                stats = reward.batch_regret(peaks, actions)
-                print_list = [trial, i, rewards, stats[0]]
-                print("{:5} {:5} {:10.5} {:8.5}".format(*print_list))
-                regret[i // INTERVAL] = stats
-
-        total_regret += regret
-
-        saver.save(sess, "./less_reg_model.ckpt")
-
-total_regret /= NUM_TRIALS
-np.save(out_file, total_regret)
+for i in range(len(peaks)):
+    # print(peaks[i], actions[i])
+    f = np.random.uniform(0, 4, NUM_ACTIONS)
+    reward.plot_reward_space(peaks[i], f, 0, actions[i])
+    #     ts, train_loss = sess.run([train_step, loss], feed_dict={m.x: peaks})
+    #
+    #     if not i % INTERVAL:
+    #         peaks = create_input_batch(BATCH_SIZE)
+    #         actions, rewards = sess.run([m.actions, loss], feed_dict={m.x: peaks})
+    #         stats = reward.batch_regret(peaks, actions)
+    #         print_list = [trial, i, rewards, stats[0]]
+    #         print("{:5} {:5} {:10.5} {:8.5}".format(*print_list))
+    #         regret[i // INTERVAL] = stats

@@ -2,3 +2,5 @@
 **/**/*.dat
 **/**/*.png
 **/**/__pycache__
+**/**/*.ckpt*
+**/**/checkpoint
