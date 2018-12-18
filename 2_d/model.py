@@ -24,7 +24,6 @@ class Model:
 
         for i in range(num_actions):
           out[i] = tf.layers.dense(inputs=h_3,
-                                   units=2,
-                                   activation=tf.nn.sigmoid)
+                                   units=2)
 
         self.actions = tf.stack(out, axis=1)

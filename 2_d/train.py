@@ -32,7 +32,7 @@ def objective(inputs, outputs):
     outcomes, values = tf.py_func(reward.batch_evaluate, [inputs, outputs], [tf.double, tf.double])
     values = tf.transpose(tf.expand_dims(values, 1), perm=[0, 2, 1])
 
-    K = gauss_kernel(outputs, tf.cast(outcomes, tf.float32), sigma=0.05)
+    K = gauss_kernel(outputs, tf.cast(outcomes, tf.float32), sigma=0.01)
     K_norm = tf.transpose(tf.expand_dims(tf.reduce_sum(K, axis=2), 1),
                           perm=[0, 2, 1])
 
@@ -40,20 +40,20 @@ def objective(inputs, outputs):
 
 def calc_loss(r, a):
     l = tf.reduce_sum(r, axis=1)
-    K = gauss_kernel(a, a, sigma=0.05)
+    K = gauss_kernel(a, a, sigma=0.01)
 
     reg = tf.reduce_sum(K, axis=[1, 2])
 
-    loss = tf.reduce_mean(l) - 0.01 * tf.reduce_mean(reg)
+    loss = tf.reduce_mean(l) - 0.1 * tf.reduce_mean(reg)
     return loss
 
 
 BATCH_SIZE = 32
 NUM_ACTIONS = 16
-NUM_TRIALS = 3
+NUM_TRIALS = 1
 TRAINING_STEPS = 30000
-INTERVAL = 250
-OUTPUT_FILE = 'p16_n0-05_reg_16_less.dat'
+INTERVAL = 2000
+OUTPUT_FILE = 'p16_n0-05_reg_16_r0-1_nsig.dat'
 
 
 m = Model(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
@@ -63,11 +63,11 @@ optimizer = tf.train.AdamOptimizer(1e-4)
 train_step = optimizer.minimize(-loss)
 
 
-total_regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
+total_regret = np.zeros([TRAINING_STEPS // INTERVAL, 3])
 out_file = open(OUTPUT_FILE, 'wb')
 
 for trial in range(NUM_TRIALS):
-    regret = np.zeros([TRAINING_STEPS // INTERVAL, 2])
+    regret = np.zeros([TRAINING_STEPS // INTERVAL, 3])
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -80,18 +80,24 @@ for trial in range(NUM_TRIALS):
 
             peaks = create_input_batch(BATCH_SIZE)
             ts, train_loss = sess.run([train_step, loss], feed_dict={m.x: peaks})
+            rewards = 0
 
             if not i % INTERVAL:
-                peaks = create_input_batch(BATCH_SIZE)
-                actions, rewards = sess.run([m.actions, loss], feed_dict={m.x: peaks})
-                stats = reward.batch_regret(peaks, actions)
-                print_list = [trial, i, rewards, stats[0]]
+
+                for j in range(5):
+                    peaks = create_input_batch(BATCH_SIZE)
+                    actions, r = sess.run([m.actions, loss], feed_dict={m.x: peaks})
+                    rewards += r
+                    stats = reward.batch_regret(peaks, actions)
+                    regret[i // INTERVAL] += stats
+
+                regret[i // INTERVAL] /= 5
+                print_list = [trial, i, rewards / 5, regret[i // INTERVAL][0]]
                 print("{:5} {:5} {:10.5} {:8.5}".format(*print_list))
-                regret[i // INTERVAL] = stats
 
         total_regret += regret
 
-        saver.save(sess, "./less_reg_model.ckpt")
+        saver.save(sess, "./no_sigmoid.ckpt")
 
 total_regret /= NUM_TRIALS
 np.save(out_file, total_regret)

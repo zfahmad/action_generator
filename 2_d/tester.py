@@ -32,7 +32,7 @@ def objective(inputs, outputs):
     outcomes, values = tf.py_func(reward.batch_evaluate, [inputs, outputs], [tf.double, tf.double])
     values = tf.transpose(tf.expand_dims(values, 1), perm=[0, 2, 1])
 
-    K = gauss_kernel(outputs, tf.cast(outcomes, tf.float32), sigma=0.05)
+    K = gauss_kernel(outputs, tf.cast(outcomes, tf.float32), sigma=0.01)
     K_norm = tf.transpose(tf.expand_dims(tf.reduce_sum(K, axis=2), 1),
                           perm=[0, 2, 1])
 
@@ -40,11 +40,11 @@ def objective(inputs, outputs):
 
 def calc_loss(r, a):
     l = tf.reduce_sum(r, axis=1)
-    K = gauss_kernel(a, a, sigma=0.05)
+    K = gauss_kernel(a, a, sigma=0.01)
 
     reg = tf.reduce_sum(K, axis=[1, 2])
 
-    loss = tf.reduce_mean(l) - 0.1 * tf.reduce_mean(reg)
+    loss = tf.reduce_mean(l) - 0.01 * tf.reduce_mean(reg)
     return loss
 
 
@@ -63,7 +63,7 @@ saver = tf.train.Saver()
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    saver.restore(sess, './model.ckpt')
+    saver.restore(sess, './no_sigmoid.ckpt')
 
     peaks = create_input_batch(BATCH_SIZE)
     actions = sess.run(m.actions, feed_dict={m.x: peaks})

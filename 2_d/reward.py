@@ -58,6 +58,7 @@ def calc_regret(input_state, outputs):
     pred_v = 0
     true_v = 0
     uni_v = 0
+    wrong_v = 0
 
     for i in range(1000):
         pert = np.random.normal(0, 2 * [eta])
@@ -71,17 +72,24 @@ def calc_regret(input_state, outputs):
 
     for i in range(1000):
         pert = np.random.normal(0, 2 * [eta])
+        outcome = true_a + pert
+        peaks = np.random.uniform(0, 1, [16, 2])
+        wrong_v += reward_function(outcome, peaks, f)
+
+    for i in range(1000):
+        pert = np.random.normal(0, 2 * [eta])
         outcome = uni_a + pert
         uni_v += reward_function(outcome, input_state, f)
 
     pred_v /= 1000
     true_v /= 1000
     uni_v /= 1000
+    wrong_v /= 1000
 
-    return true_v - pred_v, true_v - uni_v
+    return true_v - pred_v, true_v - uni_v, wrong_v - pred_v
 
 def batch_regret(batch_inputs, batch_outputs):
-    regret = np.zeros(2)
+    regret = np.zeros(3)
 
     for ind in range(len(batch_inputs)):
         regret += calc_regret(batch_inputs[ind], batch_outputs[ind])
