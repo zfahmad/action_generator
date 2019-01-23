@@ -45,11 +45,11 @@ class CNNModel:
 
         h_1 = tf.layers.conv2d(img, 2, 8, 1)
 
-        h_1_pool = tf.layers.average_pooling2d(h_1, 8, 4)
+        h_1_pool = tf.layers.average_pooling2d(h_1, 8, 4, activation=tf.nn.relu)
 
         h_2 = tf.layers.conv2d(h_1_pool, 4, 8, 1)
 
-        h_2_pool = tf.layers.average_pooling2d(h_2, 8, 4)
+        h_2_pool = tf.layers.average_pooling2d(h_2, 8, 4, activation=tf.nn.relu)
 
         h_3 = tf.layers.flatten(h_2_pool)
 

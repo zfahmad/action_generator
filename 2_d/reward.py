@@ -14,14 +14,12 @@ def evaluate_outputs(input_state, outputs, num_samples=32, eta=0.05):
     outcomes = []
     rewards = []
     f = np.random.uniform(0, 4, 16)
-    off = 0 #np.random.choice([0])
-    # f = [2, 0.5, 1]
 
     for i in range(num_samples):
         ind = i % len(outputs)
         pert = np.random.normal(0, 2 * [eta])
         outcome = outputs[ind] + pert
-        reward = reward_function(outcome, input_state, f) - off
+        reward = reward_function(outcome, input_state, f)
         outcomes.append(outcome)
         rewards.append(reward)
 
@@ -40,7 +38,6 @@ def batch_evaluate(batch_inputs, batch_outputs):
 
 def calc_regret(input_state, outputs, num):
     f = np.random.uniform(0, 4, 16)
-    off = 0 #np.random.choice([0])
     eta = 0.05
 
     bases = [.125, .375, .625, .875]
@@ -51,9 +48,12 @@ def calc_regret(input_state, outputs, num):
         for j in bases:
             uni_actions.append([i, j])
 
-    pred_a = one_ply(input_state, outputs, f, off)
+    pred_a = one_ply(input_state, outputs, f)
     true_a = input_state[np.argmax(f)]
     uni_a = uni_actions[np.argmax(f)]
+    peaks = np.random.uniform(0, 1, [16, 2])
+    wrong_a = peaks[np.argmax(f)]
+
 
     pred_v = 0
     true_v = 0
@@ -72,8 +72,7 @@ def calc_regret(input_state, outputs, num):
 
     for i in range(1000):
         pert = np.random.normal(0, 2 * [eta])
-        outcome = true_a + pert
-        peaks = np.random.uniform(0, 1, [16, 2])
+        outcome = wrong_a + pert
         wrong_v += reward_function(outcome, peaks, f)
 
     for i in range(1000):
@@ -87,9 +86,9 @@ def calc_regret(input_state, outputs, num):
     wrong_v /= 1000
 
     if true_v - pred_v < 0:
-        plot_reward_space(input_state, f, 0, num, outputs)
+        plot_reward_space(input_state, f, num, outputs)
 
-    return true_v - pred_v, true_v - uni_v, true_v - wrong_v
+    return true_v - pred_v, true_v - uni_v, wrong_v - pred_v
 
 def batch_regret(batch_inputs, batch_outputs, i):
     regret = np.zeros(3)
@@ -99,9 +98,8 @@ def batch_regret(batch_inputs, batch_outputs, i):
 
     return regret / len(batch_inputs)
 
-def one_ply(input_state, actions, f, off, num_samples=10):
+def one_ply(input_state, actions, f, num_samples=10):
     actions_stats = np.zeros(len(actions))
-    actions_counts = np.zeros(len(actions))
     eta = 0.05
 
     total_samples = len(actions) * num_samples
@@ -110,14 +108,14 @@ def one_ply(input_state, actions, f, off, num_samples=10):
         ind = i % len(actions)
         pert = np.random.normal(0, 2 * [eta])
         outcome = actions[ind] + pert
-        reward = reward_function(outcome, input_state, f) - off
+        reward = reward_function(outcome, input_state, f)
         actions_stats[ind] += reward
 
     actions_stats = actions_stats / num_samples
 
     return actions[np.argmax(actions_stats)]
 
-def plot_reward_space(mu, f, off, num, actions=None):
+def plot_reward_space(mu, f, num, actions=None):
     x = np.linspace(0, 1, 101)
     y = np.linspace(0, 1, 101)
 
@@ -128,7 +126,7 @@ def plot_reward_space(mu, f, off, num, actions=None):
         row = []
         for j in y:
             a = np.array([i, j])
-            row.append(reward_function(a, mu, f) - off)
+            row.append(reward_function(a, mu, f))
 
         r_space.append(row)
 
