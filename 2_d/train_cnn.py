@@ -1,7 +1,8 @@
 import tensorflow as tf
-from model import Model
+from model import CNNModel
 import numpy as np
 import reward
+import image as img
 
 
 def create_input_batch(batch_size):
@@ -53,13 +54,13 @@ NUM_ACTIONS = 16
 NUM_TRIALS = 1
 TRAINING_STEPS = 60000
 INTERVAL = 2000
-OUTPUT_FILE = 'p16_n0-05_reg_16_gk0-05_r0-01.dat'
+OUTPUT_FILE = 'img_p16_n0-05_reg_16_gk0-05_r0-01_pool.dat'
 
 
-m = Model(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
-r = objective(m.x, m.actions)
+m = CNNModel(num_actions=NUM_ACTIONS, batch_size=BATCH_SIZE)
+r = objective(m.peaks, m.actions)
 loss = calc_loss(r, m.actions)
-ideal_loss = calc_loss(r, m.x)
+ideal_loss = calc_loss(r, m.peaks)
 optimizer = tf.train.AdamOptimizer(1e-4)
 train_step = optimizer.minimize(-loss)
 
@@ -80,8 +81,9 @@ for trial in range(NUM_TRIALS):
         for i in range(TRAINING_STEPS):
 
             peaks = create_input_batch(BATCH_SIZE)
+            images = img.create_batch_image(peaks)
             ts, train_loss = sess.run([train_step, loss],
-                                      feed_dict={m.x: peaks})
+                                      feed_dict={m.x: images, m.peaks: peaks})
             rewards = 0
             ideal = 0
 
@@ -89,11 +91,12 @@ for trial in range(NUM_TRIALS):
 
                 for j in range(5):
                     peaks = create_input_batch(BATCH_SIZE)
+                    images = img.create_batch_image(peaks)
                     actions, r, o = sess.run([m.actions, loss, ideal_loss],
-                                          feed_dict={m.x: peaks})
+                                          feed_dict={m.x: images, m.peaks: peaks})
                     rewards += r
                     ideal += o
-                    stats = reward.batch_regret(peaks, actions)
+                    stats = reward.batch_regret(peaks, actions, i)
                     regret[i // INTERVAL] += stats
 
                 regret[i // INTERVAL] /= 5
@@ -102,7 +105,7 @@ for trial in range(NUM_TRIALS):
 
         total_regret += regret
 
-        saver.save(sess, "./models/p16_n0-05_reg_16_gk0-05_r0-01.ckpt")
+        saver.save(sess, "./models/img_p16_n0-05_reg_16_gk0-05_r0-01_pool.ckpt")
 
 total_regret /= NUM_TRIALS
 np.save(out_file, total_regret)

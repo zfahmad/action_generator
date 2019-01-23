@@ -32,13 +32,13 @@ def batch_evaluate(batch_inputs, batch_outputs):
     batch_rewards = []
 
     for ind in range(len(batch_inputs)):
-        outcomes, rewards = evaluate_outputs(batch_inputs[ind], batch_outputs[ind])
+        outcomes, rewards = evaluate_outputs(batch_inputs[ind], batch_outputs[ind], eta=0.05)
         batch_outcomes.append(outcomes)
         batch_rewards.append(rewards)
 
     return np.array(batch_outcomes), np.array(batch_rewards)
 
-def calc_regret(input_state, outputs):
+def calc_regret(input_state, outputs, num):
     f = np.random.uniform(0, 4, 16)
     off = 0 #np.random.choice([0])
     eta = 0.05
@@ -86,13 +86,16 @@ def calc_regret(input_state, outputs):
     uni_v /= 1000
     wrong_v /= 1000
 
-    return true_v - pred_v, true_v - uni_v, wrong_v - pred_v
+    if true_v - pred_v < 0:
+        plot_reward_space(input_state, f, 0, num, outputs)
 
-def batch_regret(batch_inputs, batch_outputs):
+    return true_v - pred_v, true_v - uni_v, true_v - wrong_v
+
+def batch_regret(batch_inputs, batch_outputs, i):
     regret = np.zeros(3)
 
     for ind in range(len(batch_inputs)):
-        regret += calc_regret(batch_inputs[ind], batch_outputs[ind])
+        regret += calc_regret(batch_inputs[ind], batch_outputs[ind], ind + i)
 
     return regret / len(batch_inputs)
 
@@ -114,7 +117,7 @@ def one_ply(input_state, actions, f, off, num_samples=10):
 
     return actions[np.argmax(actions_stats)]
 
-def plot_reward_space(mu, f, off, actions=None):
+def plot_reward_space(mu, f, off, num, actions=None):
     x = np.linspace(0, 1, 101)
     y = np.linspace(0, 1, 101)
 
@@ -129,12 +132,13 @@ def plot_reward_space(mu, f, off, actions=None):
 
         r_space.append(row)
 
+    fig = plt.figure()
     r_space = np.array(r_space)
     plt.xlim([0, 100])
     plt.ylim([0, 100])
     plt.xticks(np.arange(0, len(x), 10), np.arange(0, 11) / 10)
     plt.yticks(np.arange(0, len(x), 10), np.arange(0, 11) / 10)
-    plt.imshow(r_space, cmap='gray', vmin=-4, vmax=4)
+    plt.imshow(r_space, cmap='gray', vmin=0, vmax=4)
     plt.colorbar()
     plt.contour(r_space, alpha=0.6, linewidths=1, colors='black')
     a = mu[:, 1]
@@ -149,7 +153,9 @@ def plot_reward_space(mu, f, off, actions=None):
                     zorder=3)
 
     plt.grid(alpha=0.75, linestyle='dashed')
-    plt.show()
+    fname = 'fig_{}'.format(int(num))
+    plt.savefig(fname=fname)
+    plt.close()
 
 
 # mu = np.random.uniform(0, 1, (20, 2))
